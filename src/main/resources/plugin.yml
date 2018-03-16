@@ -1,0 +1,6 @@
+name: Coiner
+version: 0.01
+main: nl.dykam.dev.coiner.CoinerPlugin
+depend: [Vault]
+commands:
+  coiner: {}
