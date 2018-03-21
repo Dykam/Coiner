@@ -1,8 +1,6 @@
 package nl.dykam.dev.coiner
 import com.deanveloper.kbukkit.KotlinPlugin
 import com.deanveloper.kbukkit.chat.plus
-import com.google.common.collect.BiMap
-import com.google.common.collect.ImmutableBiMap
 import net.milkbowl.vault.economy.Economy
 import net.milkbowl.vault.economy.EconomyResponse
 import org.bukkit.Bukkit
@@ -27,7 +25,7 @@ import kotlin.math.absoluteValue
 @Suppress("unused", "UNUSED_PARAMETER")
 class CoinerPlugin: KotlinPlugin(), Listener {
     private lateinit var currency:Currency
-    private lateinit var denominationMap: BiMap<Material, Denomination>
+    private lateinit var mapping: DenominationMapper<Material>
     override fun onEnable() {
         val vault = server.pluginManager.getPlugin("Vault")
         if (vault == null)
@@ -37,12 +35,13 @@ class CoinerPlugin: KotlinPlugin(), Listener {
             return
         }
         Bukkit.getServicesManager().register(Economy::class.java, CoinerEconomy(), vault, ServicePriority.Highest)
-        denominationMap = ImmutableBiMap.copyOf(hashMapOf(
-                Material.GOLD_BLOCK  to Denomination(81, "Gold block", "Gold blocks"),
-                Material.GOLD_INGOT  to Denomination(9, "Gold ingot", "Gold ingots"),
-                Material.GOLD_NUGGET to Denomination(1, "Gold nugget", "Gold nuggets")
-        ))
-        currency = Currency(denominationMap.values)
+        val map = hashMapOf(
+                Material.GOLD_BLOCK to Denomination(81, Name("Gold block", "Gold blocks")),
+                Material.GOLD_INGOT to Denomination(9, Name("Gold ingot", "Gold ingots")),
+                Material.GOLD_NUGGET to Denomination(1, Name("Gold nugget", "Gold nuggets"))
+        )
+        currency = Currency(Name("Coin", "Coins"), map.values)
+        mapping = DenominationMapper.simple(currency, map)
 
 //        val coinerSession = CoinerSession(currency);
         server.pluginManager.registerEvents(this, this)
@@ -71,7 +70,7 @@ class CoinerPlugin: KotlinPlugin(), Listener {
             return
 
         val item = event.item
-        if (item.type !in denominationMap)
+        if (item.type !in mapping)
             return
 
         val inventory = Bukkit.createInventory(event.player, 54, EXCHANGE)
@@ -84,9 +83,9 @@ class CoinerPlugin: KotlinPlugin(), Listener {
         val value = wallet.value
         for ((index, denomination) in currency.descending.take(9).withIndex())
         {
-            val itemStack = ItemStack(denominationMap.inverse()[denomination], 1)
+            val itemStack = ItemStack(mapping[denomination], 1)
             val itemMeta = itemStack.itemMeta
-            itemMeta.displayName = ChatColor.RESET + denomination.pluralName + " x " + value / denomination.value
+            itemMeta.displayName = ChatColor.RESET + denomination.name.plural + " x " + value / denomination.value
             itemStack.itemMeta = itemMeta
             inventory.setItem(index, itemStack)
         }
@@ -115,7 +114,7 @@ class CoinerPlugin: KotlinPlugin(), Listener {
                 val player = event.whoClicked as Player
                 @Suppress("UNCHECKED_CAST")
                 val wallet = player.getMetadata(COINER_PLUGIN_INVENTORY)[0].value() as Wallet
-                wallet[denominationMap[item.type]!!] += item.amount.toLong()
+                wallet[mapping[item.type]] += item.amount.toLong()
                 updateInventory(wallet, top)
             }
             return
@@ -131,7 +130,7 @@ class CoinerPlugin: KotlinPlugin(), Listener {
             @Suppress("UNCHECKED_CAST")
             val wallet = player.getMetadata(COINER_PLUGIN_INVENTORY)[0].value() as Wallet
             val item = event.cursor
-            if (item.type !in denominationMap)
+            if (item.type !in mapping)
             {
                 event.isCancelled = true
                 return
@@ -139,7 +138,7 @@ class CoinerPlugin: KotlinPlugin(), Listener {
             event.currentItem = null
             val slot = event.slot
             server.scheduler.runTask(this, { clickedInventory.setItem(slot, null) })
-            wallet[denominationMap[item.type]!!] += item.amount.toLong()
+            wallet[mapping[item.type]] += item.amount.toLong()
             updateInventory(wallet, clickedInventory)
             return
         }
@@ -278,7 +277,7 @@ class CoinerPlugin: KotlinPlugin(), Listener {
         private fun applyWallet(player:Player, changes:Wallet) {
             for (change in changes.contents)
             {
-                val itemStack = ItemStack(denominationMap.inverse()[change.key], change.value.toInt().absoluteValue)
+                val itemStack = ItemStack(mapping[change.key], change.value.toInt().absoluteValue)
                 if (change.value < 0)
                     player.inventory.removeItem(itemStack)
                 else
@@ -364,9 +363,9 @@ class CoinerPlugin: KotlinPlugin(), Listener {
         val wallet = currency.createWallet()
         for (itemStack in player.inventory.contents)
         {
-            if (itemStack != null && itemStack.type in denominationMap)
+            if (itemStack != null && itemStack.type in mapping)
             {
-                wallet[denominationMap[itemStack.type]!!] += itemStack.amount.toLong()
+                wallet[mapping[itemStack.type]] += itemStack.amount.toLong()
             }
         }
         return wallet

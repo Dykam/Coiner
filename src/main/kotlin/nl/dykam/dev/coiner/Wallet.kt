@@ -1,10 +1,10 @@
 package nl.dykam.dev.coiner
 
 import java.util.*
-class Wallet(val currency: Currency, contents:Map<Denomination, Long> = emptyMap()) {
+class Wallet @JvmOverloads constructor(val currency: Currency, contents:Map<Denomination, Long> = emptyMap()) {
     val contents:MutableMap<Denomination, Long> = HashMap(contents).withDefault { 0 }
     val value:Long
-        get() = contents.entries.fold(0L) { s, (denomination, amount) -> s + denomination.getValue(amount) }
+        get() = contents.entries.fold(0L) { s, (denomination, amount) -> s + denomination * amount }
 
     operator fun set(denomination: Denomination, amount: Long) {
         validateDenomination(denomination)
@@ -64,8 +64,6 @@ class Wallet(val currency: Currency, contents:Map<Denomination, Long> = emptyMap
         return sb.toString()
     }
 }
-
-
 
 fun Currency.createWallet():Wallet {
     return Wallet(this)

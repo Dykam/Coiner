@@ -1,7 +1,7 @@
 package nl.dykam.dev.coiner
 import java.util.*
-class Currency(denominations: Collection<Denomination>) {
-    constructor(vararg denominations: Denomination) : this(denominations as Collection<Denomination>)
+class Currency(val name: Name, denominations: Collection<Denomination>) {
+    constructor(name: Name, vararg denominations: Denomination) : this(name, denominations as Collection<Denomination>)
 
     private val byValueDesc:SortedSet<Denomination>
     private val byValueAsc:SortedSet<Denomination>
@@ -17,12 +17,7 @@ class Currency(denominations: Collection<Denomination>) {
     val descending:Iterable<Denomination> = byValueDesc
     val ascending:Iterable<Denomination> = byValueAsc
 
-    operator fun contains(denomination: Denomination):Boolean {
-        return byValueDesc.contains(denomination)
-    }
-
-    operator fun plusAssign(denomination: Denomination) {
-        byValueDesc.add(denomination)
-        byValueAsc.add(denomination)
+    operator fun contains(denomination: Denomination): Boolean {
+        return denomination in byValueAsc
     }
 }

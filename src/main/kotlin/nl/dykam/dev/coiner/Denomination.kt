@@ -1,12 +1,11 @@
 package nl.dykam.dev.coiner
 
-data class Denomination(val value: Long, val singularName: String, val pluralName: String) {
-    fun getValue(amount:Long):Long {
-        return value * amount
-    }
+data class Denomination(val value: Long, val name: Name) {
     fun toString(amount:Long):String {
-        return "$amount ${nameFor(amount)}"
+        return "$amount ${name.of(amount)}"
     }
 
-    private fun nameFor(amount: Long) = if (amount == 1L) singularName else pluralName
+    operator fun times(amount: Long): Long {
+        return value * amount
+    }
 }
